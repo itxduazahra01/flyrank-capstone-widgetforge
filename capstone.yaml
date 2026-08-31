@@ -1,0 +1,8 @@
+run: docker compose up --build
+seed: docker compose exec api python scripts/seed_demo.py
+test: docker compose exec api python -m unittest discover -s tests -v
+base_url: http://localhost:8000
+endpoints:
+  - POST /public/v1/submissions
+  - GET /public/v1/widgets/{public_id}/config
+  - GET /api/v1/dashboard/summary

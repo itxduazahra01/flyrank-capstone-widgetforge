@@ -1,0 +1,49 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: widgetforge
+      POSTGRES_USER: widget
+      POSTGRES_PASSWORD: widget
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U widget -d widgetforge"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  api:
+    build: .
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+psycopg2://widget:widget@db:5432/widgetforge
+    ports:
+      - "8000:8000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  migrate:
+    build: .
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+psycopg2://widget:widget@db:5432/widgetforge
+    command: python scripts/run_migrations.py
+    depends_on:
+      db:
+        condition: service_healthy
+
+  worker:
+    build: .
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+psycopg2://widget:widget@db:5432/widgetforge
+    command: python scripts/run_worker.py
+    restart: unless-stopped
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+volumes:
+  postgres_data:

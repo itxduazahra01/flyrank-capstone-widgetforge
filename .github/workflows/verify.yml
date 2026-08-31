@@ -1,0 +1,30 @@
+name: Verify WidgetForge
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  capstone-proof:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Start migrated application
+        run: |
+          cp .env.example .env
+          docker compose up --build -d
+          docker compose exec -T api python scripts/seed_demo.py
+      - name: Run backend proof
+        run: docker compose exec -T -e WIDGETFORGE_TEST_MODE=1 -e DATABASE_URL=sqlite:////tmp/widgetforge-tests.db api python -m unittest discover -s tests -v
+      - name: Run browser proof
+        run: |
+          npm --prefix frontend install
+          pip install -r requirements-dev.txt
+          python -m playwright install --with-deps chromium
+          python -m unittest discover -s tests -p "test_browser*.py" -v
+      - name: Capture service logs on failure
+        if: failure()
+        run: docker compose logs

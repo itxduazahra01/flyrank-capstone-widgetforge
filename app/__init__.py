@@ -1,0 +1,1 @@
+"""WidgetForge application package."""
